@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="$PROJECT_DIR$/KafkaAvro/.env">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/KafkaAvro/.env" />
+              <option name="originalContent" value="SERVER_PORT=4000&#10;SPRING_KAFKA_BOOTSTRAP_SERVERS=localhost:29092&#10;SPRING_KAFKA_CONSUMER_GROUP_ID=order-consumer-group-prod&#10;KAFKA_REPLICATION_FACTOR=3&#10;KAFKA_PARTITIONS=20&#10;KAFKA_RETRY_ATTEMPTS=10&#10;KAFKA_RETRY_BACKOFF_MS=5000&#10;KAFKA_CONSUMER_CONCURRENCY=5&#10;SPRING_KAFKA_SCHEMA_REGISTRY_URL=http://localhost:8081&#10;SPRING_PROFILES_ACTIVE=prod" />
+              <option name="updatedContent" value="SERVER_PORT=4000&#10;SPRING_KAFKA_BOOTSTRAP_SERVERS=localhost:29092&#10;SPRING_KAFKA_CONSUMER_GROUP_ID=order-consumer-group-prod&#10;KAFKA_REPLICATION_FACTOR=3&#10;KAFKA_PARTITIONS=20&#10;KAFKA_RETRY_ATTEMPTS=10&#10;KAFKA_RETRY_BACKOFF_MS=5000&#10;KAFKA_CONSUMER_CONCURRENCY=5&#10;SPRING_KAFKA_SCHEMA_REGISTRY_URL=http://localhost:8081&#10;SPRING_PROFILES_ACTIVE=prod" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

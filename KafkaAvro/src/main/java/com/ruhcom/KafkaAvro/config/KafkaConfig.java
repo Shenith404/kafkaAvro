@@ -36,7 +36,7 @@ public class KafkaConfig {
     private String schemaRegistryUrl;
     @Value("${spring.kafka.consumer.group-id}")
     private String groupId;
-    @Value("${spring.kafka.producer.client-id")
+    @Value("${spring.kafka.producer.client-id}")
     private String clientId;
     @Value("${app.kafka.replication-factor:3}")
     private short replicationFactor;
