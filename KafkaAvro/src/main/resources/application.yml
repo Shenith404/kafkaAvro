@@ -1,0 +1,31 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+app:
+  kafka:
+    topic: order
+    dlq-topic: order-dlq
+    replication-factor: ${KAFKA_REPLICATION_FACTOR:3}
+    partitions: ${KAFKA_PARTITIONS:5}
+    retry-attempts: ${KAFKA_RETRY_ATTEMPTS:5}
+    retry-backoff-ms: ${KAFKA_RETRY_BACKOFF_MS:3000}
+    consumer-concurrency: ${KAFKA_CONSUMER_CONCURRENCY:3}
+
+spring:
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
+    properties:
+      schema-registry-url: ${SPRING_KAFKA_SCHEMA_REGISTRY_URL}
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
+      client-id: order-service-producer
+
+    consumer:
+      group-id: ${SPRING_KAFKA_CONSUMER_GROUP_ID}
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
+      auto-offset-reset: earliest
+      properties:
+        specific.avro.reader: true
