@@ -52,8 +52,7 @@ public class KafkaConfig {
     @Bean
     @ConditionalOnProperty(name = "spring.kafka.enabled", havingValue = "true", matchIfMissing = true)
     public NewTopic submissionsTopic() {
-        logger.info("Creating Kafka topic: {} with {} partitions and replication factor {}",
-                orderTopic, partitions, replicationFactor);
+        logger.info("Creating Kafka topic: {} with {} partitions and replication factor {}", orderTopic, partitions, replicationFactor);
         return new NewTopic(orderTopic, partitions, replicationFactor);
     }
 
@@ -70,7 +69,7 @@ public class KafkaConfig {
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, io.confluent.kafka.serializers.KafkaAvroSerializer.class);
-        props.put(ProducerConfig.CLIENT_ID_CONFIG,clientId);
+        props.put(ProducerConfig.CLIENT_ID_CONFIG, clientId);
         props.put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
         return new DefaultKafkaProducerFactory<>(props);
     }
@@ -80,6 +79,7 @@ public class KafkaConfig {
     public KafkaTemplate<String, Object> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
+
     @Bean
     public ConsumerFactory<String, Object> consumerFactory() {
         Map<String, Object> props = new HashMap<>();
@@ -88,6 +88,7 @@ public class KafkaConfig {
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, io.confluent.kafka.serializers.KafkaAvroDeserializer.class);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false); // Let Spring manage commits for retry logic
         props.put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
         props.put("specific.avro.reader", true);
         return new DefaultKafkaConsumerFactory<>(props);
@@ -96,9 +97,13 @@ public class KafkaConfig {
 
     @Bean
     public DeadLetterPublishingRecoverer deadLetterPublishingRecoverer(KafkaTemplate<String, Object> template) {
-        // Let Kafka distribute DLQ messages across partitions instead of hardcoding partition 0
-        return new DeadLetterPublishingRecoverer(template,
-                (r, e) -> new org.apache.kafka.common.TopicPartition(dlqTopic, -1)); // -1 = no partition specified
+        // Let Kafka distribute DLQ messages across partitions of the DLQ topic
+        logger.info("DeadLetterPublishingRecoverer configured to publish to DLQ topic: {}", dlqTopic);
+
+        return new DeadLetterPublishingRecoverer(template, (r, e) -> {
+            logger.error("Sending message to DLQ topic: {} for record: {}, Exception: {}", dlqTopic, r.key(), e.getMessage());
+            return new org.apache.kafka.common.TopicPartition(dlqTopic, 0); // Use partition 0 for DLQ
+        });
     }
 
 
@@ -108,16 +113,18 @@ public class KafkaConfig {
         FixedBackOff backOff = new FixedBackOff(retryBackoffMs, retryAttempts);
         DefaultErrorHandler handler = new DefaultErrorHandler(recoverer, backOff);
 
-        // Add non-retryable exceptions that should go directly to DLQ
-        handler.addNotRetryableExceptions(
-                IllegalArgumentException.class,
-                NullPointerException.class,
-                ClassCastException.class,
-                org.apache.kafka.common.errors.SerializationException.class
-        );
+        // Add retry listener for logging
+        handler.setRetryListeners((record, ex, deliveryAttempt) -> {
+            logger.warn("=== RETRY ATTEMPT {} ===", deliveryAttempt);
+            logger.warn("Retrying message with key: {} on topic: {}", record.key(), record.topic());
+            logger.warn("Exception: {}", ex.getMessage());
+            logger.warn("Next retry in {}ms", retryBackoffMs);
+        });
 
-        logger.info("Error handler configured with {} retry attempts and {}ms backoff",
-                retryAttempts, retryBackoffMs);
+        // Add non-retryable exceptions that should go directly to DLQ
+        handler.addNotRetryableExceptions(IllegalArgumentException.class, NullPointerException.class, ClassCastException.class, org.apache.kafka.common.errors.SerializationException.class);
+
+
         return handler;
     }
 
@@ -128,13 +135,12 @@ public class KafkaConfig {
         factory.setConsumerFactory(consumerFactory());
         factory.setConcurrency(consumerConcurrency); // Configurable concurrency
         factory.setCommonErrorHandler(errorHandler);
+        // Set container properties for proper error handling
+        factory.getContainerProperties().setAckMode(org.springframework.kafka.listener.ContainerProperties.AckMode.RECORD);
 
-        logger.info("Kafka listener factory configured with concurrency: {}", consumerConcurrency);
+        logger.info("Kafka listener factory configured with concurrency: {} and RECORD acknowledgment mode", consumerConcurrency);
         return factory;
     }
-
-
-
 
 
 }

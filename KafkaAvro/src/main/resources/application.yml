@@ -1,6 +1,14 @@
 server:
   port: ${SERVER_PORT:8080}
 
+logging:
+  level:
+    com.ruhcom.KafkaAvro: DEBUG
+    org.springframework.kafka: INFO
+    org.apache.kafka: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
 app:
   kafka:
     topic: order
@@ -29,3 +37,4 @@ spring:
       auto-offset-reset: earliest
       properties:
         specific.avro.reader: true
+
