@@ -99,7 +99,6 @@ public class KafkaConfig {
     public DeadLetterPublishingRecoverer deadLetterPublishingRecoverer(KafkaTemplate<String, Object> template) {
         // Let Kafka distribute DLQ messages across partitions of the DLQ topic
         logger.info("DeadLetterPublishingRecoverer configured to publish to DLQ topic: {}", dlqTopic);
-
         return new DeadLetterPublishingRecoverer(template, (r, e) -> {
             logger.error("Sending message to DLQ topic: {} for record: {}, Exception: {}", dlqTopic, r.key(), e.getMessage());
             return new org.apache.kafka.common.TopicPartition(dlqTopic, 0); // Use partition 0 for DLQ
@@ -112,7 +111,6 @@ public class KafkaConfig {
         // Configurable retry with backoff
         FixedBackOff backOff = new FixedBackOff(retryBackoffMs, retryAttempts);
         DefaultErrorHandler handler = new DefaultErrorHandler(recoverer, backOff);
-
         // Add retry listener for logging
         handler.setRetryListeners((record, ex, deliveryAttempt) -> {
             logger.warn("=== RETRY ATTEMPT {} ===", deliveryAttempt);
@@ -120,11 +118,8 @@ public class KafkaConfig {
             logger.warn("Exception: {}", ex.getMessage());
             logger.warn("Next retry in {}ms", retryBackoffMs);
         });
-
         // Add non-retryable exceptions that should go directly to DLQ
         handler.addNotRetryableExceptions(IllegalArgumentException.class, NullPointerException.class, ClassCastException.class, org.apache.kafka.common.errors.SerializationException.class);
-
-
         return handler;
     }
 
@@ -137,7 +132,6 @@ public class KafkaConfig {
         factory.setCommonErrorHandler(errorHandler);
         // Set container properties for proper error handling
         factory.getContainerProperties().setAckMode(org.springframework.kafka.listener.ContainerProperties.AckMode.RECORD);
-
         logger.info("Kafka listener factory configured with concurrency: {} and RECORD acknowledgment mode", consumerConcurrency);
         return factory;
     }
